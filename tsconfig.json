@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es6",                          
+    "module": "commonjs",                     
+    "strict": true,                           
+    "esModuleInterop": true,                  
+    "skipLibCheck": true,                     
+    "forceConsistentCasingInFileNames": true, 
+    "outDir": "./dist",                       
+    "rootDir": "./src",                       
+    "resolveJsonModule": true,                
+    "noFallthroughCasesInSwitch": true,       
+    "moduleResolution": "node",               
+    "isolatedModules": true,
+    "typeRoots": ["./node_modules/@types", "./src/types/express", "@types"] // Ensure the path is correct
+  },
+  "include": ["src/*/.ts", "src/index.ts", "src/*/", "No_push/createUser.js"],                
+  "exclude": ["node_modules"]
+}
