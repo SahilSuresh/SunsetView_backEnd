@@ -57,7 +57,7 @@ router.post("/register", [
         });
         console.log("Cookie Set"); // Log that the cookie was set
 
-        return res.sendStatus(200);
+        return res.status(200).json({ message: "Registration successful", userId: user.id });
     } catch (e) {
         console.log("Error in /register route:", e); // Log the full error
         return res.status(500).json({ message: "Internal Server Error" });
