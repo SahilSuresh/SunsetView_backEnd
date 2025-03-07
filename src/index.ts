@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import userRoutes from './routes/users'
+import usersRoutes from './routes/users'
+import authRoutes from './routes/auth'
 // dataconenction
 const connectDB = async () => {
   try {
@@ -26,7 +27,9 @@ app.use(express.urlencoded({extended: true}));
 //Security to prevent certain request from certain URL
 app.use(cors());
 
-app.use("/api/users", userRoutes);
+app.use("/api/users", usersRoutes);
+
+app.use("/api/auth", authRoutes);
 
 //Start the server
 app.listen(3000, () => {
