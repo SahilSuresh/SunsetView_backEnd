@@ -4,6 +4,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import usersRoutes from './routes/users'
 import authRoutes from './routes/auth'
+import cookieParser from 'cookie-parser';
 // dataconenction
 const connectDB = async () => {
   try {
@@ -17,6 +18,7 @@ const connectDB = async () => {
 
 
 const app = express();
+app.use(cookieParser());
 
 //Convert body of API request into json. So you do not need to handle it own your own.
 app.use(express.json());
@@ -25,7 +27,10 @@ app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
 //Security to prevent certain request from certain URL
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+}));
 
 app.use("/api/users", usersRoutes);
 
