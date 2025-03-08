@@ -5,16 +5,26 @@ import mongoose from 'mongoose';
 import usersRoutes from './routes/users'
 import authRoutes from './routes/auth'
 import cookieParser from 'cookie-parser';
-// dataconenction
+
+// Database connection
 const connectDB = async () => {
-  try {
-      const conn = await mongoose.connect(process.env.REACT_APP_MONGO_CONNECTION_STRING as string);
+    try {
+      // Connect to the appropriate database based on environment
+      const connectionString = process.env.REACT_APP_MONGO_CONNECTION_STRING as string;
+      const conn = await mongoose.connect(connectionString);
       console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
+      
+      // Log environment info
+      console.log(`Environment: ${process.env.NODE_ENV}`);
+      console.log(`Database: ${process.env.NODE_ENV === 'e2e' ? 'E2E Test Database' : 'Main Database'}`);
+    } catch (error) {
       console.error(`Error connecting to MongoDB: ${String(error)}`);
       process.exit(1);
-  }
-};
+    }
+  };
+
+// Connect to database
+connectDB();
 
 
 const app = express();
@@ -39,6 +49,5 @@ app.use("/api/auth", authRoutes);
 //Start the server
 app.listen(3000, () => {
     console.log("Sever running on https://localhost:3000");
-    // connect to db
-    connectDB();
+    
 });
