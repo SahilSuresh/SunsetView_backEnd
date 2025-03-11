@@ -5,6 +5,16 @@ import mongoose from 'mongoose';
 import usersRoutes from './routes/users'
 import authRoutes from './routes/auth'
 import cookieParser from 'cookie-parser';
+import { v2   as cloundinary } from 'cloudinary';
+import myHotelRoutes from './routes/my-hotels';
+
+
+cloundinary.config({
+    cloud_name: process.env.REACT_APP_CLOUDINARY_CLOUD_NAME as string,
+    api_key: process.env.REACT_APP_CLOUDINARY_API_KEY as string,
+    api_secret: process.env.REACT_APP_CLOUDINARY_API_SECRET as string,
+});
+
 
 // Database connection
 const connectDB = async () => {
@@ -27,6 +37,7 @@ const connectDB = async () => {
 connectDB();
 
 
+
 const app = express();
 app.use(cookieParser());
 
@@ -45,6 +56,8 @@ app.use(cors({
 app.use("/api/users", usersRoutes);
 
 app.use("/api/auth", authRoutes);
+
+app.use("/api/my-hotels", myHotelRoutes);
 
 //Start the server
 app.listen(3000, () => {
