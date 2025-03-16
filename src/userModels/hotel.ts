@@ -2,13 +2,14 @@ import mongoose from "mongoose";
 
 //define the hotel schema so we can start saving hotel on our database. 
 export type HotelType = {
+    _id: string;
     id: string;
     userId: string;
     name: string;
     city: string;
     country: string;
     description: string;
-    type: String;
+    type: string;
     adultCount: number;
     childrenCount: number;
     facilities: string[];
