@@ -6,21 +6,22 @@ export type UserType = {
   lastName: string; // User's last name
 };
   
-  export type HotelType = {
-    id: string;
-    userId: string;
-    name: string;
-    city: string;
-    country: string;
-    description: string;
-    type: string;
-    adultCount: number;
-    childrenCount: number;
-    facilities: string[];
-    pricePerNight: number;
-    rating: number;
-    imageURL: string[];
-    lastUpdated: Date;
+export type HotelType = {
+  id: string;
+  _id?: string; // Add this optional property for MongoDB's _id
+  userId: string;
+  name: string;
+  city: string;
+  country: string;
+  description: string;
+  type: string;
+  adultCount: number;
+  childrenCount: number;
+  facilities: string[];
+  pricePerNight: number;
+  rating: number;
+  imageURL: string[];
+  lastUpdated: Date;
 };
   
   export type BookingType = {
@@ -36,10 +37,10 @@ export type UserType = {
     totalCost: number;
   };
   
-  export type HotelSearchResponse = {
+  export type HotelQueryResponse = {
     data: HotelType[];
     pagination: {
-      total: number;
+      totalHotels: number;
       page: number;
       pages: number;
     };

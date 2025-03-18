@@ -7,6 +7,7 @@ import authRoutes from './routes/auth'
 import cookieParser from 'cookie-parser';
 import { v2   as cloundinary } from 'cloudinary';
 import myHotelRoutes from './routes/my-hotels';
+import hotelRoutes from "./routes/hotels";
 
 
 cloundinary.config({
@@ -57,7 +58,9 @@ app.use("/api/users", usersRoutes);
 
 app.use("/api/auth", authRoutes);
 
-app.use("/api/my-hotels", myHotelRoutes);
+app.use("/api/my-hotels", myHotelRoutes); //deal with login user hotels
+
+app.use("/api/hotels", hotelRoutes); //deal with visitor tp the website to search for hotels
 
 //Start the server
 app.listen(3000, () => {

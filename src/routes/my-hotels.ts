@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import multer from "multer";
 import cloundinary from "cloudinary";
 import Hotel, { HotelType } from "../userModels/hotel";
-import verifyToken from "../middleware/authRegister"; // Import the middleware
+import verifyToken from "../middleware/authRegister";
 import { body } from "express-validator";
 
 const router = express.Router();
@@ -144,6 +144,86 @@ router.put(
     } catch (error) {
       console.error("Error updating hotel:", error);
       res.status(500).json({ message: "Error updating hotel" });
+    }
+  }
+);
+
+// New route to delete a specific image from a hotel
+router.delete(
+  "/:id/images",
+  verifyToken,
+  async (req: Request, res: Response): Promise<void> => {
+    const id = req.params.id.toString();
+    const imageUrl = req.query.imageUrl as string;
+
+    if (!imageUrl) {
+      res.status(400).json({ message: "Image URL is required" });
+      return;
+    }
+
+    try {
+      // First, find the hotel
+      const hotel = await Hotel.findOne({ _id: id, userId: req.userId });
+
+      if (!hotel) {
+        res.status(404).json({ message: "Hotel not found" });
+        return;
+      }
+
+      // Filter out the image URL from the imageURL array
+      const updatedImageURLs = hotel.imageURL.filter(
+        (url: string) => url !== imageUrl
+      );
+
+      // Verify that the image was actually in the array
+      if (updatedImageURLs.length === hotel.imageURL.length) {
+        res.status(404).json({ message: "Image not found in hotel" });
+        return;
+      }
+
+      // Update the hotel with the new image array
+      console.log("Before update - Hotel images:", hotel.imageURL);
+      console.log("Updating to:", updatedImageURLs);
+      
+      // Use updateOne instead of save for more direct control
+      await Hotel.updateOne(
+        { _id: id, userId: req.userId },
+        { 
+          $set: { 
+            imageURL: updatedImageURLs,
+            lastUpdated: new Date()
+          } 
+        }
+      );
+      
+      // Verify the update worked
+      const updatedHotel = await Hotel.findOne({ _id: id });
+      console.log("After update - Hotel images:", updatedHotel?.imageURL);
+
+      // Delete the image from Cloudinary if needed
+      try {
+        // Extract public id from the URL (this depends on your Cloudinary URL structure)
+        // Example: https://res.cloudinary.com/dqgooesfi/image/upload/v1111111111/abcdefgh.jpg
+        // We need to extract "abcdefgh" as the public ID
+        const publicIdMatch = imageUrl.match(/\/v\d+\/(.+?)\./);
+        const publicId = publicIdMatch ? publicIdMatch[1] : null;
+        
+        if (publicId) {
+          await cloundinary.v2.uploader.destroy(publicId);
+          console.log(`Deleted image from Cloudinary: ${publicId}`);
+        }
+      } catch (cloudinaryError) {
+        console.error("Error deleting from Cloudinary:", cloudinaryError);
+        // We'll still return success since the DB was updated
+      }
+
+      res.status(200).json({ 
+        message: "Image deleted successfully",
+        updatedImageURLs 
+      });
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      res.status(500).json({ message: "Error deleting image" });
     }
   }
 );
