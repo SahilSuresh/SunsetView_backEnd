@@ -1,24 +1,19 @@
 import mongoose from "mongoose";
+import { BookingType, HotelType } from "../share/type";
 
-//define the hotel schema so we can start saving hotel on our database. 
-export type HotelType = {
-    _id: string;
-    id: string;
-    userId: string;
-    name: string;
-    city: string;
-    country: string;
-    description: string;
-    type: string;
-    adultCount: number;
-    childrenCount: number;
-    facilities: string[];
-    pricePerNight: number;
-    rating: number;
-    imageURL: string[];
-    lastUpdated: Date;
-}
 
+const bookingScheme = new mongoose.Schema<BookingType>({
+    firstName: {type: String, required: true},
+    lastName: {type: String, required: true},
+    email: {type: String, required: true},
+    adultCount: {type: Number, required: true},
+    childrenCount: {type: Number, required: true},
+    checkIn: {type:Date, required: true},
+    checkOut: {type:Date, required: true},
+    userId: {type: String, required: true},
+    bookingTotalCost: {type: Number, required: true}
+
+})
 const hotelSchema = new mongoose.Schema<HotelType>({
     userId: {type: String, required: true},
     name: {type: String, required: true},
@@ -32,9 +27,8 @@ const hotelSchema = new mongoose.Schema<HotelType>({
     pricePerNight: {type: Number, required: true},
     rating: {type: Number, required: true},
     imageURL: [{type: String, required: true}],
-    lastUpdated: {type: Date, required: true}
-
-
+    lastUpdated: {type: Date, required: true},
+    bookings: [bookingScheme],
 });
 
 const Hotel = mongoose.model<HotelType>("Hotel", hotelSchema);

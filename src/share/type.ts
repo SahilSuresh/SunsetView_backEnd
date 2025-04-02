@@ -22,6 +22,7 @@ export type HotelType = {
   rating: number;
   imageURL: string[];
   lastUpdated: Date;
+  bookings: BookingType[];
 };
   
   export type BookingType = {
@@ -31,10 +32,10 @@ export type HotelType = {
     lastName: string;
     email: string;
     adultCount: number;
-    childCount: number;
+    childrenCount: number;
     checkIn: Date;
     checkOut: Date;
-    totalCost: number;
+    bookingTotalCost: number;
   };
   
   export type HotelQueryResponse = {
@@ -49,5 +50,5 @@ export type HotelType = {
   export type PaymentIntentResponse = {
     paymentIntentId: string;
     clientSecret: string;
-    totalCost: number;
+    bookingTotalCost: number;
   };

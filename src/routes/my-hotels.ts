@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
 import multer from "multer";
 import cloundinary from "cloudinary";
-import Hotel, { HotelType } from "../userModels/hotel";
+import Hotel from "../userModels/hotel";
+import { HotelType } from "../share/type";
 import verifyToken from "../middleware/authRegister";
 import { body } from "express-validator";
 
@@ -182,23 +183,10 @@ router.delete(
       }
 
       // Update the hotel with the new image array
-      console.log("Before update - Hotel images:", hotel.imageURL);
-      console.log("Updating to:", updatedImageURLs);
-      
-      // Use updateOne instead of save for more direct control
-      await Hotel.updateOne(
-        { _id: id, userId: req.userId },
-        { 
-          $set: { 
-            imageURL: updatedImageURLs,
-            lastUpdated: new Date()
-          } 
-        }
-      );
-      
-      // Verify the update worked
-      const updatedHotel = await Hotel.findOne({ _id: id });
-      console.log("After update - Hotel images:", updatedHotel?.imageURL);
+      hotel.imageURL = updatedImageURLs;
+      hotel.lastUpdated = new Date();
+
+      await hotel.save();
 
       // Delete the image from Cloudinary if needed
       try {
