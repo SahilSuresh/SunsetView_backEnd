@@ -102,6 +102,16 @@ router.get("/search", async (req: Request, res: Response) => {
   }
 });
 
+//home page. 
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const hotels = await Hotel.find().sort("-lastUpdated"); 
+    res.json(hotels);
+  } catch (error) {
+    console.error("Error fetching hotels:", error);
+    res.status(500).json({ message: "Error getting hotels" });
+  }
+})
 //so anything request that goes to apu/hotels/ whatever the hotel Id is going to handle by this get request.
 router.get(
   "/:id",

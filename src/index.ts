@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { v2   as cloundinary } from 'cloudinary';
 import myHotelRoutes from './routes/my-hotels';
 import hotelRoutes from "./routes/hotels";
+import hotelBookingRoutes from "./routes/my-bookings";
 
 
 cloundinary.config({
@@ -62,6 +63,7 @@ app.use("/api/my-hotels", myHotelRoutes); //deal with login user hotels
 
 app.use("/api/hotels", hotelRoutes); //deal with visitor tp the website to search for hotels
 
+app.use("/api/my-bookings", hotelBookingRoutes); //deal with visitor tp the website to search for hotels
 //Start the server
 app.listen(3000, () => {
     console.log("Sever running on https://localhost:3000");
