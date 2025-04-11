@@ -5,18 +5,17 @@ import mongoose from 'mongoose';
 import usersRoutes from './routes/users'
 import authRoutes from './routes/auth'
 import cookieParser from 'cookie-parser';
-import { v2   as cloundinary } from 'cloudinary';
+import { v2 as cloundinary } from 'cloudinary';
 import myHotelRoutes from './routes/my-hotels';
 import hotelRoutes from "./routes/hotels";
 import hotelBookingRoutes from "./routes/my-bookings";
-
+import passwordResetRoutes from './routes/passwordReset';
 
 cloundinary.config({
     cloud_name: process.env.REACT_APP_CLOUDINARY_CLOUD_NAME as string,
     api_key: process.env.REACT_APP_CLOUDINARY_API_KEY as string,
     api_secret: process.env.REACT_APP_CLOUDINARY_API_SECRET as string,
 });
-
 
 // Database connection
 const connectDB = async () => {
@@ -38,8 +37,6 @@ const connectDB = async () => {
 // Connect to database
 connectDB();
 
-
-
 const app = express();
 app.use(cookieParser());
 
@@ -55,17 +52,17 @@ app.use(cors({
     credentials: true,
 }));
 
+// Password reset route (keep this)
+app.use("/api/password", passwordResetRoutes);
+
+// Routes that require authentication token check
 app.use("/api/users", usersRoutes);
-
 app.use("/api/auth", authRoutes);
+app.use("/api/my-hotels", myHotelRoutes);
+app.use("/api/hotels", hotelRoutes);
+app.use("/api/my-bookings", hotelBookingRoutes);
 
-app.use("/api/my-hotels", myHotelRoutes); //deal with login user hotels
-
-app.use("/api/hotels", hotelRoutes); //deal with visitor tp the website to search for hotels
-
-app.use("/api/my-bookings", hotelBookingRoutes); //deal with visitor tp the website to search for hotels
 //Start the server
 app.listen(3000, () => {
-    console.log("Sever running on https://localhost:3000");
-    
+    console.log("Server running on http://localhost:3000");
 });

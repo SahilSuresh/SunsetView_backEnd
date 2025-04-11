@@ -10,6 +10,21 @@ declare global {
     }
 }
 const verifyToken = (req: Request, res: Response, next: NextFunction): void => {
+    // List of public routes that don't require authentication
+    const publicRoutes = [
+        '/api/users/register',
+        '/api/auth/login',
+        '/api/password/forgot-password',
+        '/api/password/validate-token',
+        '/api/password/reset-password'
+    ];
+
+    // Skip token verification for public routes
+    if (publicRoutes.some(route => req.path.startsWith(route))) {
+        next();
+        return; // Just return without a value
+    }
+    
     const token = req.cookies["auth_token"];
     
     if (!token) {
@@ -30,5 +45,3 @@ const verifyToken = (req: Request, res: Response, next: NextFunction): void => {
 };
 
 export default verifyToken;
-
-

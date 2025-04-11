@@ -3,7 +3,7 @@ import User from "../userModels/user";
 import jwt from "jsonwebtoken";
 import { body, validationResult } from 'express-validator';
 import verifyToken from "../middleware/authRegister";
-import { promises } from "fs";
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -36,29 +36,34 @@ router.post("/register", [
         .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage("Password must contain at least 1 special character"),
 ], async (req: Request, res: Response): Promise<any> => {
     try {
-        // Check for validation errors - keeping only this one instance
+        // Check for validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
 
-        console.log("Request Body:", req.body); // Log the request body
+        console.log("Request Body:", req.body);
 
         let user = await User.findOne({
             email: req.body.email,
         });
-        console.log("User Found:", user); // Log the user found in the database
+        console.log("User Found:", user);
 
         if (user) {
             return res.status(400).json({ message: "Email already exists" });
         }
 
-        user = new User(req.body);
-        console.log("New User:", user); // Log the new user object
+        // Create new user without verification fields
+        user = new User({
+            ...req.body
+        });
+        
+        console.log("New User:", user);
 
         await user.save();
-        console.log("User Saved:", user); // Log the saved user
+        console.log("User Saved:", user);
 
+        // Create JWT token for immediate login
         const token = jwt.sign(
             { userId: user.id },
             process.env.REACT_APP_JWT_SECRET_KEY as string,
@@ -66,18 +71,17 @@ router.post("/register", [
                 expiresIn: "2d",
             }
         );
-        console.log("Token Generated:", token); // Log the generated token
-
+        
+        // Set authentication cookie
         res.cookie("auth_token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            maxAge: 172800000, // 2 days in milliseconds
+            maxAge: 172800000, // 2 days
         });
-        console.log("Cookie Set"); // Log that the cookie was set
 
-        return res.status(200).json({ message: "Registration successful", userId: user.id });
+        return res.status(200).json({ userId: user._id });
     } catch (e) {
-        console.log("Error in /register route:", e); // Log the full error
+        console.log("Error in /register route:", e);
         return res.status(500).json({ message: "Internal Server Error" });
     }
 });
