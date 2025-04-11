@@ -5,6 +5,8 @@ import { param, validationResult } from "express-validator";
 import Stripe from "stripe";
 import verifyToken from "../middleware/authRegister";
 import { promises } from "dns";
+import mongoose from "mongoose";
+import { sendBookingConfirmationEmail } from "../services/emailService";
 
 const stripeInstance = new Stripe(
   process.env.REACT_APP_STRIPE_SECRET_KEY as string
@@ -102,17 +104,18 @@ router.get("/search", async (req: Request, res: Response) => {
   }
 });
 
-//home page. 
+// Home page - get all hotels
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const hotels = await Hotel.find().sort("-lastUpdated"); 
+    const hotels = await Hotel.find().sort("-lastUpdated");
     res.json(hotels);
   } catch (error) {
     console.error("Error fetching hotels:", error);
     res.status(500).json({ message: "Error getting hotels" });
   }
-})
-//so anything request that goes to apu/hotels/ whatever the hotel Id is going to handle by this get request.
+});
+
+// Get hotel by ID
 router.get(
   "/:id",
   [param("id").notEmpty().withMessage("Hotel ID is required")],
@@ -126,7 +129,7 @@ router.get(
     const id = req.params.id.toString();
 
     try {
-      const hotel = await Hotel.findById(id); //find the hotel we want by ID
+      const hotel = await Hotel.findById(id); // Find the hotel we want by ID
       res.json(hotel);
     } catch (error) {
       console.error(error);
@@ -135,6 +138,7 @@ router.get(
   }
 );
 
+// Create payment intent for booking
 router.post(
   "/:hotelId/bookings/payment-intent",
   verifyToken,
@@ -149,8 +153,12 @@ router.post(
     }
 
     // Calculate cost based on adults and children
-    const adultCost = hotel.pricePerNight * parseInt(adultCount) * parseInt(numberOfNight);
-    const childrenCost = (hotel.pricePerNight / 2) * parseInt(childrenCount) * parseInt(numberOfNight);
+    const adultCost =
+      hotel.pricePerNight * parseInt(adultCount) * parseInt(numberOfNight);
+    const childrenCost =
+      (hotel.pricePerNight / 2) *
+      parseInt(childrenCount) *
+      parseInt(numberOfNight);
     const bookingTotalCost = adultCost + childrenCost;
 
     const paymentIntent = await stripeInstance.paymentIntents.create({
@@ -161,7 +169,7 @@ router.post(
         userId: req.userId,
         adultCount,
         childrenCount,
-        numberOfNight
+        numberOfNight,
       },
     });
 
@@ -179,6 +187,7 @@ router.post(
   }
 );
 
+// Create booking after successful payment
 router.post(
   "/:hotelId/bookings",
   verifyToken,
@@ -190,40 +199,56 @@ router.post(
       );
 
       if (!paymentIntent) {
-        return res.status(400).json({ message: "payment not found" });
+        return res.status(400).json({ message: "Payment not found" });
       }
 
       if (
         paymentIntent.metadata.hotelId !== req.params.hotelId ||
         paymentIntent.metadata.userId !== req.userId
       ) {
-        return res.status(400).json({ message: "payment intent mismatch" });
+        return res.status(400).json({ message: "Payment intent mismatch" });
       }
 
       if (paymentIntent.status !== "succeeded") {
-        return res.status(400).json({ message: "payment failed" });
+        return res.status(400).json({ message: "Payment failed" });
       }
 
+      // Create new reservation with a proper MongoDB ID
       const newReservation: BookingType = {
         ...req.body,
         userId: req.userId,
+        _id: new mongoose.Types.ObjectId().toString() // Generate a proper MongoDB ID
       };
 
+      // Find the hotel and update it with the new booking
       const hotel = await Hotel.findOneAndUpdate(
         { _id: req.params.hotelId },
         {
           $push: { bookings: newReservation },
-        }
+        },
+        { new: true } // Return the updated document
       );
 
-      if(!hotel) {
-        return res.status(400).json({message: "hotel not found"});
+      if (!hotel) {
+        return res.status(400).json({ message: "Hotel not found" });
       }
-      
-      await hotel.save();  
-      
-      res.status(200).send();
-      
+
+      // Send booking confirmation email
+      try {
+        // Get the last booking (the one we just added)
+        const addedBooking = hotel.bookings[hotel.bookings.length - 1];
+        
+        await sendBookingConfirmationEmail(addedBooking, hotel);
+        console.log("Booking confirmation email sent successfully");
+      } catch (emailError) {
+        // Don't fail the booking if email sending fails
+        console.error("Failed to send booking confirmation email:", emailError);
+      }
+
+      res.status(200).json({ 
+        message: "Booking created successfully",
+        bookingId: newReservation._id
+      });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Internal Server Error" });

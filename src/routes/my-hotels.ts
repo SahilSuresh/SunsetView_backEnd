@@ -216,4 +216,30 @@ router.delete(
   }
 );
 
+// Add this route handler to your my-hotels.ts route file in the backend
+
+// Get bookings for a specific hotel
+router.get("/:id/bookings", verifyToken, async (req: Request, res: Response):Promise<any> => {
+  const hotelId = req.params.id;
+  const userId = req.userId;
+
+  try {
+    // Find the hotel that belongs to the user and has the specified ID
+    const hotel = await Hotel.findOne({
+      _id: hotelId,
+      userId: userId
+    });
+
+    if (!hotel) {
+      return res.status(404).json({ message: "Hotel not found or you don't have permission to view it" });
+    }
+
+    // Return the hotel with its bookings
+    res.json(hotel);
+  } catch (error) {
+    console.error("Error fetching hotel bookings:", error);
+    res.status(500).json({ message: "Error fetching hotel bookings" });
+  }
+});
+
 export default router;
