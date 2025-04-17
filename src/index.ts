@@ -1,3 +1,5 @@
+// Update to index.ts - Add admin routes import and use
+
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
@@ -10,6 +12,9 @@ import myHotelRoutes from './routes/my-hotels';
 import hotelRoutes from "./routes/hotels";
 import hotelBookingRoutes from "./routes/my-bookings";
 import passwordResetRoutes from './routes/passwordReset';
+import adminRoutes from './routes/admin'; // Import admin routes
+import contactRoutes from './routes/contact';
+
 
 cloundinary.config({
     cloud_name: process.env.REACT_APP_CLOUDINARY_CLOUD_NAME as string,
@@ -52,7 +57,7 @@ app.use(cors({
     credentials: true,
 }));
 
-// Password reset route (keep this)
+// Password reset route
 app.use("/api/password", passwordResetRoutes);
 
 // Routes that require authentication token check
@@ -61,6 +66,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/my-hotels", myHotelRoutes);
 app.use("/api/hotels", hotelRoutes);
 app.use("/api/my-bookings", hotelBookingRoutes);
+
+
+// Admin routes
+app.use("/api/admin", adminRoutes);
+
+app.use("/api/contact", contactRoutes);
 
 //Start the server
 app.listen(3000, () => {

@@ -9,6 +9,7 @@ export type UserType = {
     lastName: string;
     resetPasswordToken: string | null;
     resetPasswordExpires: Date | null;
+    isAdmin: boolean;
 };
 
 const userSchema = new mongoose.Schema({
@@ -36,15 +37,32 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpires: {
         type: Date,
         default: null
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
     }
 });
 
+// THIS IS THE PROBLEMATIC PART - pre-save hook 
+// is re-hashing already hashed passwords
 userSchema.pre("save", async function (next) {
+    // Only hash the password if it's been modified (or is new)
     if (this.isModified("password")) {
-        if (typeof this.password === "string") {
-            this.password = await bcrypt.hash(this.password, 8);
-        } else {
-            throw new Error("Password must be a string");
+        try {
+            // Check if the password is already hashed (starts with $2a$ or $2b$)
+            if (!this.password.startsWith('$2a$') && !this.password.startsWith('$2b$')) {
+                if (typeof this.password === "string") {
+                    console.log(`Hashing password for user: ${this.email}`);
+                    this.password = await bcrypt.hash(this.password, 8);
+                } else {
+                    throw new Error("Password must be a string");
+                }
+            } else {
+                console.log(`Password already hashed for user: ${this.email}`);
+            }
+        } catch (error) {
+            return next(error as mongoose.CallbackError);
         }
     }
     next();

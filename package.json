@@ -7,7 +7,11 @@
     "build": "npm install && npx tsc",
     "start": "node ./dist/index.js",
     "dev": "nodemon",
-    "e2e": "cross-env DOTENV_CONFIG_PATH=.env.e2e nodemon"
+    "e2e": "cross-env DOTENV_CONFIG_PATH=.env.e2e nodemon",
+    "init-admin": "ts-node src/scripts/initAdmin.ts",
+    "fix-admin": "ts-node src/scripts/fixAdminAccount.ts",
+    "create-test-user": "ts-node src/scripts/createTestUser.ts",
+    "reset-passwords": "ts-node src/scripts/resetPasswords.ts"
   },
   "author": "Shahil Suresh",
   "license": "ISC",
@@ -30,7 +34,7 @@
     "mongoose": "^8.12.1",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.3",
-    "nodemailer": "^6.10.0",
+    "nodemailer": "^6.10.1",
     "pdfkit": "^0.16.0",
     "stripe": "^17.7.0"
   },

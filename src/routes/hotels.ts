@@ -8,10 +8,11 @@ import { promises } from "dns";
 import mongoose from "mongoose";
 import { sendBookingConfirmationEmail } from "../services/emailService";
 
-const stripeInstance = new Stripe(
-  process.env.REACT_APP_STRIPE_SECRET_KEY as string
-);
+const stripeInstance = new Stripe(process.env.REACT_APP_STRIPE_SECRET_KEY as string);
+
+
 const router = express.Router();
+
 
 router.get("/search", async (req: Request, res: Response) => {
   try {
@@ -35,9 +36,15 @@ router.get("/search", async (req: Request, res: Response) => {
       ];
     }
 
-    // Add rating filter if provided
+    // Add rating filter if provided - UPDATED for multi-select
     if (req.query.rating) {
-      filters.rating = { $gte: parseInt(req.query.rating.toString()) };
+      // Handle both array and single value
+      const ratings = Array.isArray(req.query.rating) 
+        ? req.query.rating.map(r => parseInt(r.toString())) 
+        : [parseInt(req.query.rating.toString())];
+      
+      // Use $in operator to match any of the provided ratings
+      filters.rating = { $in: ratings };
     }
 
     // Add hotel type filter if provided
