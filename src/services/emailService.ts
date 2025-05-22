@@ -1,9 +1,16 @@
 // services/emailService.ts
 
-import nodemailer from 'nodemailer';
-import { BookingType, HotelType } from "../share/type";
+// Import required modules
+import nodemailer from 'nodemailer'; // Email sending service
+import { BookingType, HotelType } from "../share/type"; // Shared types for bookings and hotels
 
-// Configure mail transporter
+/**
+ * EMAIL TRANSPORTER CONFIGURATION
+ * 
+ * Here we set up the Nodemailer transporter to connect to an email server.
+ * - We use environment variables for email provider, username, and password.
+ * - This ensures that sensitive credentials are not hard-coded and can easily be changed per environment (development, production, etc).
+ */
 const transporter = nodemailer.createTransport({
   service: process.env.EMAIL_SERVICE || 'gmail',
   auth: {
@@ -12,9 +19,21 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Base email template with consistent styling
+/**
+ * BASE EMAIL TEMPLATE
+ * 
+ * This function wraps the dynamic email content inside a fully styled HTML layout.
+ * It ensures:
+ * - Consistent branding (SunsetView.com colors, fonts, etc.)
+ * - Mobile responsiveness
+ * - Professional look for all emails
+ * 
+ * We pass in:
+ * - title: the heading displayed on the email header
+ * - content: the main dynamic body content
+ */
 const baseEmailTemplate = (title: string, content: string) => {
-  const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear(); // To show the current year dynamically in the footer
   
   return `
     <!DOCTYPE html>
@@ -244,7 +263,71 @@ const baseEmailTemplate = (title: string, content: string) => {
   `;
 };
 
-// Enhanced password reset template
+/**
+ * SEND EMAIL VERIFICATION LINK
+ * 
+ * This is called right after a user registers.
+ * 
+ * Logic:
+ * - We generate a frontend URL including the token.
+ * - We email the user a "Verify Email" button.
+ * - The link expires in 24 hours (enforced on frontend or backend later).
+ * 
+ * Purpose:
+ * - Ensure users confirm their email address before activating their account.
+ */
+export const sendVerificationEmail = async (
+  to: string, 
+  token: string, 
+  firstName: string
+) => {
+  const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+  
+  const content = `
+    <h2>Hello ${firstName},</h2>
+    <p>Thank you for registering with SunsetView! Please verify your email address to activate your account.</p>
+    
+    <div class="button-container">
+      <a href="${verifyUrl}" class="button">Verify Email Address</a>
+    </div>
+    
+    <p>If you did not create an account, you can safely ignore this email.</p>
+    
+    <div class="warning-card">
+      <h3>Important Notice</h3>
+      <p>This verification link will expire in 24 hours.</p>
+    </div>
+    
+    <p>If the button doesn't work, copy and paste this URL into your browser:</p>
+    <div class="card">
+      <p style="word-break: break-all; font-size: 14px;">${verifyUrl}</p>
+    </div>
+  `;
+  
+  const mailOptions = {
+    from: `"SunsetView.com" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: 'Verify Your Email Address',
+    html: baseEmailTemplate('Email Verification', content)
+  };
+
+  return transporter.sendMail(mailOptions);
+};
+
+/**
+ * SEND PASSWORD RESET LINK
+ * 
+ * Called when the user clicks "Forgot Password?".
+ * 
+ * Logic:
+ * - A one-time secure token is generated elsewhere.
+ * - We embed this token into a reset password URL.
+ * - We email them a reset password link.
+ * 
+ * Important:
+ * - Link expires in 1 hour (enforced in token validation logic).
+ * - User should never see if a certain email exists or not (done at API level for security).
+ */
 export const sendPasswordResetEmail = async (
   to: string, 
   token: string, 
@@ -283,7 +366,21 @@ export const sendPasswordResetEmail = async (
   return transporter.sendMail(mailOptions);
 };
 
-// Enhanced booking confirmation email
+/**
+ * SEND BOOKING CONFIRMATION EMAIL
+ * 
+ * After the user successfully pays for a booking, we call this.
+ * 
+ * Logic:
+ * - Calculate how many nights they are staying.
+ * - Show a full summary: check-in, check-out, number of guests, price breakdown.
+ * - Show total amount paid.
+ * - Offer a link to contact support if they need to modify or cancel.
+ * 
+ * Why:
+ * - Builds trust by confirming the booking immediately.
+ * - Shows clear transparent information about the stay.
+ */
 export const sendBookingConfirmationEmail = async (
   booking: BookingType,
   hotel: HotelType
@@ -385,7 +482,14 @@ export const sendBookingConfirmationEmail = async (
   }
 };
 
-// Function to send cancellation approval email
+/**
+ * SEND CANCELLATION APPROVAL EMAIL
+ * 
+ * Logic:
+ * - After admin approves the user's cancellation request.
+ * - Confirm that booking is cancelled.
+ * - Inform about refund processing if any.
+ */
 export const sendCancellationApprovedEmail = async (
   to: string,
   name: string,
@@ -435,7 +539,13 @@ export const sendCancellationApprovedEmail = async (
   }
 };
 
-// Function to send cancellation rejection email
+/**
+ * SEND CANCELLATION REJECTION EMAIL
+ * 
+ * Logic:
+ * - After admin reviews a cancellation request but cannot approve it.
+ * - Explain clearly to the user that the booking is still active.
+ */
 export const sendCancellationRejectedEmail = async (
   to: string,
   name: string,

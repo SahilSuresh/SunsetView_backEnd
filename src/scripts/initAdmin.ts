@@ -1,4 +1,3 @@
-// scripts/initAdmin.ts
 
 import mongoose from 'mongoose';
 import User from "../userModels/user";
@@ -47,11 +46,9 @@ const initializeAdmin = async () => {
                 lastName: adminLastName,
                 isAdmin: true
             });
-            
             await newAdmin.save();
             console.log(`Created admin user with email: ${adminEmail}`);
         }
-        
         console.log('Admin initialization complete');
     } catch (error) {
         console.error('Error initializing admin:', error);
@@ -60,6 +57,5 @@ const initializeAdmin = async () => {
         console.log('Disconnected from MongoDB');
     }
 };
-
 // Run the initialization
 initializeAdmin();

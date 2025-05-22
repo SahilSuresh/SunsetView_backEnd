@@ -1,65 +1,66 @@
-// userModels/contactMessage.ts
+// Import Mongoose for MongoDB schema and model creation
 import mongoose from "mongoose";
+import { ContactMessageType } from "../share/type"; // Import shared types for strong typing
 
-export type ContactMessageType = {
-  _id: string;
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  bookingId?: string;
-  isRead: boolean;
-  isCancellationRequest: boolean;
-  status?: "pending" | "approved" | "rejected" | "completed";
-  createdAt: Date;
-  updatedAt: Date;
-};
 
+
+/**
+ * Mongoose Schema Definition
+ * 
+ * Defines the structure of a ContactMessage document in MongoDB.
+ */
 const contactMessageSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: true, // Cannot submit a message without a name
     },
     email: {
       type: String,
-      required: true,
+      required: true, // Email address is required for follow-up communication
     },
     subject: {
       type: String,
-      required: true,
+      required: true, // Subject helps admins prioritize and categorize messages
     },
     message: {
       type: String,
-      required: true,
+      required: true, // The actual content of the inquiry or request
     },
     bookingId: {
       type: String,
-      default: null,
+      default: null, // Not all messages are related to bookings; optional field
     },
     isRead: {
       type: Boolean,
-      default: false,
+      default: false, // New messages are unread by default
     },
     isCancellationRequest: {
       type: Boolean,
-      default: false,
+      default: false, // Default to false; set to true when user requests a booking cancellation
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "completed"],
-      default: "pending",
+      enum: ["pending", "approved", "rejected", "completed"], // Allowed values
+      default: "pending", // New cancellation requests start in pending state
     },
   },
   {
-    timestamps: true,
+    timestamps: true, // Automatically manage createdAt and updatedAt timestamps
   }
 );
 
-// Create index for faster queries
+// Indexes
+// Improve performance when querying by isRead and isCancellationRequest
 contactMessageSchema.index({ isRead: 1, isCancellationRequest: 1 });
+// Optional sparse index for bookingId (only indexed if field exists)
 contactMessageSchema.index({ bookingId: 1 }, { sparse: true });
 
+/**
+ * Mongoose Model
+ * 
+ * Export a reusable model instance to interact with the contact messages collection.
+ */
 const ContactMessage = mongoose.model<ContactMessageType>(
   "ContactMessage",
   contactMessageSchema

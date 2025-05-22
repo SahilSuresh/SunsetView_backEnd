@@ -1,13 +1,25 @@
 // routes/admin.ts
 
-import express, { Request, Response } from "express";
-import verifyToken from "../middleware/authRegister";
-import verifyAdmin from "../middleware/adminAuth";
-import User from "../userModels/user";
-import Hotel from "../userModels/hotel";
-import { BookingType } from "../share/type";
+/**
+ * Admin Routes
+ * 
+ * Purpose:
+ * - Allow authenticated admins to view system data and manage users and hotels.
+ * 
+ * Protection:
+ * - Every route here is protected by two middlewares:
+ *    1. verifyToken → ensures user is logged in (token is valid)
+ *    2. verifyAdmin → ensures user has admin privileges
+ */
 
-// Define an extended booking type with hotel info
+import express, { Request, Response } from "express";
+import verifyToken from "../middleware/authRegister"; // Verify if the user is logged in
+import verifyAdmin from "../middleware/adminAuth";    // Verify if the user is an admin
+import User from "../userModels/user";                // Mongoose User model
+import Hotel from "../userModels/hotel";              // Mongoose Hotel model
+import { BookingType } from "../share/type";          // Shared Booking type
+
+// Extended Booking Type to include hotel info (for admin viewing)
 type BookingWithHotel = BookingType & {
   hotelName: string;
   hotelCity: string;
@@ -15,31 +27,39 @@ type BookingWithHotel = BookingType & {
   hotelId: string;
 };
 
+// Create Express router
 const router = express.Router();
 
-// All routes here require both authentication and admin privileges
+// Apply verifyToken and verifyAdmin to ALL routes
 router.use(verifyToken, verifyAdmin);
 
-// Get dashboard stats
+/**
+ * @route   GET /admin/dashboard
+ * @desc    Admin dashboard stats: total users, hotels, bookings, revenue
+ * @access  Admin Only
+ */
 router.get("/dashboard", async (req: Request, res: Response) => {
   try {
-    // Count total users, hotels, and bookings
+    // Step 1: Count users
     const totalUsers = await User.countDocuments();
+
+    // Step 2: Count hotels
     const totalHotels = await Hotel.countDocuments();
     
-    // Calculate total bookings across all hotels
-    const hotelsWithBookings = await Hotel.find({}, { bookings: 1 });
+    // Step 3: Count bookings and calculate recent bookings
+    const hotelsWithBookings = await Hotel.find({}, { bookings: 1 }); // Only fetch bookings field
+
     const totalBookings = hotelsWithBookings.reduce((total, hotel) => {
       return total + (hotel.bookings ? hotel.bookings.length : 0);
     }, 0);
-    
-    // Calculate recent bookings (last 30 days)
+
+    // Step 4: Calculate recent bookings (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     let recentBookings = 0;
     hotelsWithBookings.forEach(hotel => {
-      if (hotel.bookings && hotel.bookings.length > 0) {
+      if (hotel.bookings) {
         hotel.bookings.forEach(booking => {
           if (new Date(booking.checkIn) >= thirtyDaysAgo) {
             recentBookings++;
@@ -47,18 +67,18 @@ router.get("/dashboard", async (req: Request, res: Response) => {
         });
       }
     });
-    
-    // Calculate total revenue
+
+    // Step 5: Calculate total revenue
     let totalRevenue = 0;
     hotelsWithBookings.forEach(hotel => {
-      if (hotel.bookings && hotel.bookings.length > 0) {
+      if (hotel.bookings) {
         hotel.bookings.forEach(booking => {
           totalRevenue += booking.bookingTotalCost || 0;
         });
       }
     });
-    
-    // Return dashboard stats
+
+    // Send aggregated dashboard stats
     res.json({
       totalUsers,
       totalHotels,
@@ -72,9 +92,14 @@ router.get("/dashboard", async (req: Request, res: Response) => {
   }
 });
 
-// Get all users
+/**
+ * @route   GET /admin/users
+ * @desc    Get all users (excluding passwords)
+ * @access  Admin Only
+ */
 router.get("/users", async (req: Request, res: Response) => {
   try {
+    // Find all users but do not return password field
     const users = await User.find().select("-password");
     res.json(users);
   } catch (error) {
@@ -83,25 +108,27 @@ router.get("/users", async (req: Request, res: Response) => {
   }
 });
 
-// Get all hotels with summary information
+/**
+ * @route   GET /admin/hotels
+ * @desc    Get all hotels (with booking counts)
+ * @access  Admin Only
+ */
 router.get("/hotels", async (req: Request, res: Response) => {
   try {
+    // Fetch hotels with selected fields
     const hotels = await Hotel.find().select("name city country userId rating pricePerNight bookings");
-    
-    // Add booking counts to each hotel
+
+    // Process hotels: remove bookings array but add bookingCount
     const hotelsWithBookingCounts = hotels.map(hotel => {
       const hotelObj = hotel.toObject();
       const bookingCount = hotel.bookings ? hotel.bookings.length : 0;
-      
-      // Create a new object without the bookings property
       const { bookings, ...hotelWithoutBookings } = hotelObj;
-      
       return {
         ...hotelWithoutBookings,
         bookingCount
       };
     });
-    
+
     res.json(hotelsWithBookingCounts);
   } catch (error) {
     console.error("Error fetching hotels:", error);
@@ -109,20 +136,21 @@ router.get("/hotels", async (req: Request, res: Response) => {
   }
 });
 
-// Get all bookings across all hotels
+/**
+ * @route   GET /admin/bookings
+ * @desc    Get all bookings across all hotels with hotel info
+ * @access  Admin Only
+ */
 router.get("/bookings", async (req: Request, res: Response) => {
   try {
-    const hotels = await Hotel.find({ "bookings.0": { $exists: true } })
-                              .select("name city country bookings");
-    
-    // Flatten the bookings array with hotel information
+    const hotels = await Hotel.find({ "bookings.0": { $exists: true } }).select("name city country bookings");
+
+    // Flatten bookings into a single array with hotel metadata attached
     const bookings: BookingWithHotel[] = [];
-    
+
     hotels.forEach(hotel => {
-      if (hotel.bookings && hotel.bookings.length > 0) {
+      if (hotel.bookings) {
         hotel.bookings.forEach(booking => {
-          // Instead of calling toObject(), create a plain object
-          // We take all properties from the BookingType and add our new properties
           const bookingWithHotel: BookingWithHotel = {
             _id: booking._id,
             userId: booking.userId,
@@ -134,18 +162,16 @@ router.get("/bookings", async (req: Request, res: Response) => {
             checkIn: booking.checkIn,
             checkOut: booking.checkOut,
             bookingTotalCost: booking.bookingTotalCost,
-            // Add hotel information
             hotelName: hotel.name,
             hotelCity: hotel.city,
             hotelCountry: hotel.country,
             hotelId: hotel._id.toString()
           };
-          
           bookings.push(bookingWithHotel);
         });
       }
     });
-    
+
     res.json(bookings);
   } catch (error) {
     console.error("Error fetching bookings:", error);
@@ -153,25 +179,27 @@ router.get("/bookings", async (req: Request, res: Response) => {
   }
 });
 
-// Delete a user (careful with this one)
+/**
+ * @route   DELETE /admin/users/:userId
+ * @desc    Delete a specific user by ID (Admin cannot delete themselves)
+ * @access  Admin Only
+ */
 router.delete("/users/:userId", async (req: Request, res: Response): Promise<any> => {
   try {
     const userId = req.params.userId;
-    
-    // Don't allow deletion of the current admin
+
+    // Block admin from accidentally deleting their own account
     if (userId === req.userId) {
       return res.status(400).json({ message: "Cannot delete your own account" });
     }
-    
-    // Check if user exists
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
-    // Delete the user
+
     await User.findByIdAndDelete(userId);
-    
+
     res.json({ message: "User deleted successfully" });
   } catch (error) {
     console.error("Error deleting user:", error);
@@ -179,16 +207,20 @@ router.delete("/users/:userId", async (req: Request, res: Response): Promise<any
   }
 });
 
-// Get a single hotel with full details
+/**
+ * @route   GET /admin/hotels/:hotelId
+ * @desc    Get full details of a specific hotel
+ * @access  Admin Only
+ */
 router.get("/hotels/:hotelId", async (req: Request, res: Response): Promise<any> => {
   try {
     const hotelId = req.params.hotelId;
     const hotel = await Hotel.findById(hotelId);
-    
+
     if (!hotel) {
       return res.status(404).json({ message: "Hotel not found" });
     }
-    
+
     res.json(hotel);
   } catch (error) {
     console.error("Error fetching hotel:", error);
@@ -196,36 +228,33 @@ router.get("/hotels/:hotelId", async (req: Request, res: Response): Promise<any>
   }
 });
 
-export default router;
-
-
-
-
-
-// Delete a hotel
+/**
+ * @route   DELETE /admin/hotels/:hotelId
+ * @desc    Delete a hotel by ID (return info if it had bookings)
+ * @access  Admin Only
+ */
 router.delete("/hotels/:hotelId", async (req: Request, res: Response): Promise<any> => {
-    try {
-      const hotelId = req.params.hotelId;
-      
-      // Check if hotel exists
-      const hotel = await Hotel.findById(hotelId);
-      if (!hotel) {
-        return res.status(404).json({ message: "Hotel not found" });
-      }
-      
-      // Check if hotel has bookings
-      const hasBookings = hotel.bookings && hotel.bookings.length > 0;
-      
-      // Delete the hotel
-      await Hotel.findByIdAndDelete(hotelId);
-      
-      // Return success message
-      res.json({ 
-        message: "Hotel deleted successfully",
-        hadBookings: hasBookings
-      });
-    } catch (error) {
-      console.error("Error deleting hotel:", error);
-      res.status(500).json({ message: "Error deleting hotel" });
+  try {
+    const hotelId = req.params.hotelId;
+
+    const hotel = await Hotel.findById(hotelId);
+    if (!hotel) {
+      return res.status(404).json({ message: "Hotel not found" });
     }
-  });
+
+    const hasBookings = hotel.bookings && hotel.bookings.length > 0;
+
+    await Hotel.findByIdAndDelete(hotelId);
+
+    res.json({ 
+      message: "Hotel deleted successfully",
+      hadBookings: hasBookings
+    });
+  } catch (error) {
+    console.error("Error deleting hotel:", error);
+    res.status(500).json({ message: "Error deleting hotel" });
+  }
+});
+
+// Export the router for use in app.ts/server.ts
+export default router;
